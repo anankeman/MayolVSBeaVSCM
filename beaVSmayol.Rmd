@@ -1,0 +1,75 @@
+---
+output:
+  html_document: default
+  html_notebook: default
+---
+
+# ONE COMMUNITY'S MANAGER, TWO CANDIDATES
+
+
+Bea Sanchéz (BS) y Alberto Mayol (AM) son dos candidatos del mismo conglomerado, el Frente Amplio (FA), compitiendo por ser el candidato presidencial de dicho grupo. Ambos hacen campañas en internet y tiene su propios medios, en el contexto de una mayor campaña que enfrentara a FA con otros conglomerados. Pero en esta primaria...a quièn apoya el community manager del FA?
+
+```{r}
+setwd("C:/Users/Pippo/Documents")
+library(Rfacebook)
+load("fb_oauth")
+
+tok<-"EAACEdEose0cBAHsfvRUeyoaaKCYfp3Wnro3xE9NgprTB8qfmNYmPhioUXNglxxPAGx0uZC9aVA5VhpsCqmsAPDzWoDUZAEksRlHdPRwpSoeJP4YLB5nvzXaqo3bgdQx4B8gWCHgsgjZCTBQjvZCArLNwRyJjvVJgSM0zjJRKXJBg7GEihbzWFUFRbtEawrkZD"
+
+FA<-getPage(page = "FrenteAmpliodeChile", token = tok, n = 3000)
+
+```
+
+Ok, tenemos las 723 publicaciones del community manager del FA en Facebook. Primero clasificaremos los post si se refieren a AM, a BS, a ambos o a ninguno.
+
+```{r}
+library(tm)
+library(stringr)
+library(ggplot2)
+
+```
+```{r}
+posteo<-vector()
+
+for (i in 1:length(FA$message)) {
+  if ((grepl("mayol", FA$message[i], ignore.case = T) | grepl("alberto", FA$message[i])) && (grepl("bea", FA$message[i]) | grepl("s.nchez", FA$message[i]))) {
+    posteo<-c(posteo,"Ambos")
+  } else if (grepl("mayol", FA$message[i], ignore.case = T)|grepl("alberto", FA$message[i], ignore.case = T)) {
+    posteo<-c(posteo,"Mayol")
+  } else if (grepl("s.nchez", FA$message[i], ignore.case = T)|grepl("bea", FA$message[i], ignore.case = T)) {
+    posteo<-c(posteo,"Bea")
+  } else {
+    posteo<-c(posteo,"Ninguno")
+  }
+}
+
+FA$posteo<-posteo
+
+
+```
+
+Ahora calcularemos la cantidad de posteos por cantidato y la extensión promedio de cada texto como indicadores de preferencia.
+
+Para contar palabras primero retiramos puntuación y espacios dobles.
+
+```{r}
+
+FA$message2<-str_replace_all(FA$message, pattern = "[[:punct:]]", " ")
+FA$message2<-str_replace_all(FA$message2, "  ", " ")
+FA$lista<-sapply(FA$message2, function(x) {strsplit(x = x,split = " ")})
+
+FA$cuenta<-sapply(FA$lista, length)
+extension<-aggregate(FA$cuenta, list(FA$posteo), mean)
+cantidad<-aggregate(FA$cuenta, list(FA$posteo), length)
+```
+
+El resultado es:
+
+```{r}
+ggplot(extension, aes(x=Group.1,y=x, fill=Group.1), label = Group.1)+geom_col()+ xlab("Candidato") + ylab("Palabras promedio por post")+ geom_text(aes(label=x), color= "white", vjust=1.2)
+```
+
+```{r}
+ggplot(cantidad, aes(x=Group.1,y=x, fill=Group.1), label = Group.1)+geom_col()+ xlab("Candidato") + ylab("Cantidad de post")+ geom_text(aes(label=x), color= "white", vjust=1.2)
+```
+
