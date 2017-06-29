@@ -7,7 +7,7 @@ output:
 # ONE COMMUNITY'S MANAGER, TWO CANDIDATES
 
 
-Bea Sanchéz (BS) y Alberto Mayol (AM) son dos candidatos del mismo conglomerado, el Frente Amplio (FA), compitiendo por ser el candidato presidencial de dicho grupo. Ambos hacen campañas en internet y tiene su propios medios, en el contexto de una mayor campaña que enfrentara a FA con otros conglomerados. Pero en esta primaria...a quièn apoya el community manager del FA?
+Bea Sánchez (BS) y Alberto Mayol (AM) son dos candidatos del mismo conglomerado, el Frente Amplio (FA), compitiendo por ser el candidato presidencial de dicho grupo. Ambos hacen campañas en internet y tiene su propios medios, en el contexto de una mayor campaña que enfrentara a FA con otros conglomerados. Pero en esta primaria...a quièn apoya el community manager del FA?
 
 ```{r}
 setwd("C:/Users/Pippo/Documents")
