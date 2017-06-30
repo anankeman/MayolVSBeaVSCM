@@ -4,17 +4,17 @@ output:
   html_notebook: default
 ---
 
-# ONE COMMUNITY'S MANAGER, TWO CANDIDATES
+# ONE COMMUNITY MANAGER, TWO CANDIDATES
 
 
-Bea Sánchez (BS) y Alberto Mayol (AM) son dos candidatos del mismo conglomerado, el Frente Amplio (FA), compitiendo por ser el candidato presidencial de dicho grupo. Ambos hacen campañas en internet y tiene su propios medios, en el contexto de una mayor campaña que enfrentara a FA con otros conglomerados. Pero en esta primaria...a quièn apoya el community manager del FA?
+Bea Sánchez (BS) y Alberto Mayol (AM) son dos candidatos del mismo conglomerado, el Frente Amplio (FA), compitiendo por ser el candidato presidencial de dicho grupo. Ambos hacen campañas en internet y tiene su propios medios, en el contexto de una mayor campaña que enfrentara a FA con otros conglomerados. Pero en esta primaria...a quién apoya el community manager del FA?
 
-```{r}
+```{r,include=FALSE}
 setwd("C:/Users/Pippo/Documents")
 library(Rfacebook)
 load("fb_oauth")
 
-tok<-"EAACEdEose0cBAHsfvRUeyoaaKCYfp3Wnro3xE9NgprTB8qfmNYmPhioUXNglxxPAGx0uZC9aVA5VhpsCqmsAPDzWoDUZAEksRlHdPRwpSoeJP4YLB5nvzXaqo3bgdQx4B8gWCHgsgjZCTBQjvZCArLNwRyJjvVJgSM0zjJRKXJBg7GEihbzWFUFRbtEawrkZD"
+tok<-"EAACEdEose0cBAHoxSXNoeqvZC7svyP7QuY4zlf5NyiK4MAIXeWX9YsrieJmdI8D4DwEHEQOtfgCeg45bAQalwqFIRE5YZBqcV9ZAqGjMgeZCFjyV7xW1mCidB6hupkAZCNI1dctByJ9FBoYUPtqkYwQTRCxh5WbT05fp06dZCvztWA5XP05mAFdSG1RblZBB4QZD"
 
 FA<-getPage(page = "FrenteAmpliodeChile", token = tok, n = 3000)
 
@@ -22,7 +22,7 @@ FA<-getPage(page = "FrenteAmpliodeChile", token = tok, n = 3000)
 
 Ok, tenemos las 723 publicaciones del community manager del FA en Facebook. Primero clasificaremos los post si se refieren a AM, a BS, a ambos o a ninguno.
 
-```{r}
+```{r,include=FALSE}
 library(tm)
 library(stringr)
 library(ggplot2)
@@ -32,7 +32,7 @@ library(ggplot2)
 posteo<-vector()
 
 for (i in 1:length(FA$message)) {
-  if ((grepl("mayol", FA$message[i], ignore.case = T) | grepl("alberto", FA$message[i])) && (grepl("bea", FA$message[i]) | grepl("s.nchez", FA$message[i]))) {
+  if ((grepl("mayol", FA$message[i], ignore.case = T) | grepl("alberto", FA$message[i], ignore.case = T)) && (grepl("bea", FA$message[i], ignore.case = T) | grepl("s.nchez", FA$message[i], ignore.case = T))) {
     posteo<-c(posteo,"Ambos")
   } else if (grepl("mayol", FA$message[i], ignore.case = T)|grepl("alberto", FA$message[i], ignore.case = T)) {
     posteo<-c(posteo,"Mayol")
@@ -66,10 +66,69 @@ cantidad<-aggregate(FA$cuenta, list(FA$posteo), length)
 El resultado es:
 
 ```{r}
-ggplot(extension, aes(x=Group.1,y=x, fill=Group.1), label = Group.1)+geom_col()+ xlab("Candidato") + ylab("Palabras promedio por post")+ geom_text(aes(label=x), color= "white", vjust=1.2)
+ggplot(extension, aes(x=Group.1,y=x, fill=Group.1), label = Group.1)+geom_col()+ xlab("Candidato") + ylab("Palabras promedio por post")+ geom_text(aes(label=round(x,2)), color= "white", vjust=1.2)
 ```
 
 ```{r}
-ggplot(cantidad, aes(x=Group.1,y=x, fill=Group.1), label = Group.1)+geom_col()+ xlab("Candidato") + ylab("Cantidad de post")+ geom_text(aes(label=x), color= "white", vjust=1.2)
+ggplot(cantidad, aes(x=Group.1,y=x, fill=Group.1), label = Group.1)+geom_col()+ xlab("Candidato") + ylab("Cantidad de post")+ geom_text(aes(label=round(x,2)), color= "white", vjust=1.2)
 ```
+
+Aparentemente hay una ligera preferencia por Mayol, sin embargo Mayol se lanzò antes que Bea de candidata. Veamos como distribuye en el tiempo.
+
+```{r}
+FA$created_time<-as.Date(FA$created_time)
+tiempo<-aggregate(FA$cuenta, list(FA$created_time,FA$posteo), length)
+```
+
+```{r}
+ggplot(tiempo, aes(x=Group.1, y=x, group=Group.2, colour=Group.2))+geom_line()+ xlab("Candidato") + ylab("Cantidad de post")
+```
+Ok, los post por ninguno dan mucho ruido para apreciar el gráfico, saquémoslos.
+
+```{r}
+tiempo2<-tiempo[tiempo$Group.2 != "Ninguno",]
+
+ggplot(tiempo2, aes(x=Group.1, y=x, group=Group.2, colour=Group.2))+geom_line()+ xlab("Candidato") + ylab("Cantidad de post")
+
+```
+ No parece haber una diferencia notable en el tiempo. Aparentemente si hay algun sesgo.
+ 
+ 
+Para confirmarlo debiesemos aplicar algún test estadístico, almenos contra el promedio de palabras utilizados.
+.
+```{r}
+bea<-FA$cuenta[FA$posteo == "Bea"]
+mayol<-FA$cuenta[FA$posteo == "Mayol"]
+ambos<-FA$cuenta[FA$posteo == "Ambos"]
+
+FA3<-FA[FA$posteo != "Ninguno",]
+
+t.test(bea,mayol)
+```
+
+Mmmm, con un p-value de 0.3, no es significativo. Sin embargo la distribución no es normal (pendiente).
+
+Por otra parte hay un monton de publicaciones (580+) que no hacen referencia a ningún candidato en particular ¿Cuál es el contenido de estos post?. Hagamos modelamiento de tópicos para ver de se trata.
+
+```{r}
+## LDA a los mensajes ninguno
+library(RTextTools)
+library(topicmodels)
+
+FA2<-FA[FA$posteo == "Ninguno",]
+ninguno<-FA2$message
+matrixEX <- create_matrix(ninguno, language="spanish", removeNumbers=TRUE, stemWords=F, removeStopwords = T, stripWhitespace = T, weighting = tm::weightTf)
+
+rowTotals <- apply(matrixEX , 1, sum)
+matrixEX2   <- matrixEX[rowTotals> 0, ]
+
+ldaEX <- LDA(matrixEX2, 20)
+
+```
+
+```{r}
+terms(ldaEX, 6)
+```
+
+
 
