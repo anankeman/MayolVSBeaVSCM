@@ -14,13 +14,15 @@ setwd("C:/Users/Pippo/Documents")
 library(Rfacebook)
 load("fb_oauth")
 
-tok<-"EAACEdEose0cBAHoxSXNoeqvZC7svyP7QuY4zlf5NyiK4MAIXeWX9YsrieJmdI8D4DwEHEQOtfgCeg45bAQalwqFIRE5YZBqcV9ZAqGjMgeZCFjyV7xW1mCidB6hupkAZCNI1dctByJ9FBoYUPtqkYwQTRCxh5WbT05fp06dZCvztWA5XP05mAFdSG1RblZBB4QZD"
+tok<-"EAACEdEose0cBAFCBNjHzgduUnEmEJ4peytgJmbjcanGLwLm4D5u2KirVef7FxrH9H6DVeDAFlZCIffe9M8z82giUC4twkRhyCAicOi1AmiKcr68O6ypk9cp45bfgzZCnePQ3QvPUKpsr0tziwP8MUDAKT4BZAwkZCwMRaGbyaQX5bDfFeURTymKVr5ZBi1HoZD"
 
+```
+```{r}
 FA<-getPage(page = "FrenteAmpliodeChile", token = tok, n = 3000)
 
 ```
 
-Ok, tenemos las 723 publicaciones del community manager del FA en Facebook. Primero clasificaremos los post si se refieren a AM, a BS, a ambos o a ninguno.
+Ok, tenemos las `r length(FA$from_id)` publicaciones del community manager del FA en Facebook. Primero clasificaremos los post si se refieren a AM, a BS, a ambos o a ninguno.
 
 ```{r,include=FALSE}
 library(tm)
@@ -45,7 +47,6 @@ for (i in 1:length(FA$message)) {
 
 FA$posteo<-posteo
 
-
 ```
 
 Ahora calcularemos la cantidad de posteos por cantidato y la extensión promedio de cada texto como indicadores de preferencia.
@@ -63,7 +64,7 @@ extension<-aggregate(FA$cuenta, list(FA$posteo), mean)
 cantidad<-aggregate(FA$cuenta, list(FA$posteo), length)
 ```
 
-El resultado es:
+###El resultado es:
 
 ```{r}
 ggplot(extension, aes(x=Group.1,y=x, fill=Group.1), label = Group.1)+geom_col()+ xlab("Candidato") + ylab("Palabras promedio por post")+ geom_text(aes(label=round(x,2)), color= "white", vjust=1.2)
@@ -106,15 +107,35 @@ FA3<-FA[FA$posteo != "Ninguno",]
 t.test(bea,mayol)
 ```
 
-Mmmm, con un p-value de 0.3, no es significativo. Sin embargo la distribución no es normal (pendiente).
+Mmmm, con un p-value de 0.3, no es significativo. Pero acá hay algo extraño, supusimos que la cantidad de palabras por poteo distribuía normal. Let's check that.
+```{r}
+
+plot(density(FA$cuenta))
+plot(density(mayol))
+plot(density(bea))
+grid()
+```
+
+ok, están algo lejos de distribuir normal, de hecho tiene sentido que sigan la ley de Zipf. Esto significa que mejor indicador es la mediana antes que el promedio y que posiblemente deberíamos usar otro tipo de test. Pero primero coparemos las medianas:
+
+```{r}
+extension2<-aggregate(FA$cuenta, list(FA$posteo), median)
+ggplot(extension2, aes(x=Group.1,y=x, fill=Group.1), label = Group.1)+geom_col()+ xlab("Candidato") + ylab("Palabras promedio por post")+ geom_text(aes(label=round(x,2)), color= "white", vjust=1.2)
+```
+
+
+
+### El contenido de ninguno
 
 Por otra parte hay un monton de publicaciones (580+) que no hacen referencia a ningún candidato en particular ¿Cuál es el contenido de estos post?. Hagamos modelamiento de tópicos para ver de se trata.
 
-```{r}
+```{r,include=FALSE}
 ## LDA a los mensajes ninguno
 library(RTextTools)
 library(topicmodels)
+```
 
+```{r}
 FA2<-FA[FA$posteo == "Ninguno",]
 ninguno<-FA2$message
 matrixEX <- create_matrix(ninguno, language="spanish", removeNumbers=TRUE, stemWords=F, removeStopwords = T, stripWhitespace = T, weighting = tm::weightTf)
@@ -122,11 +143,7 @@ matrixEX <- create_matrix(ninguno, language="spanish", removeNumbers=TRUE, stemW
 rowTotals <- apply(matrixEX , 1, sum)
 matrixEX2   <- matrixEX[rowTotals> 0, ]
 
-ldaEX <- LDA(matrixEX2, 20)
-
-```
-
-```{r}
+ldaEX <- LDA(matrixEX2, 20, method = "Gibbs")
 terms(ldaEX, 6)
 ```
 
